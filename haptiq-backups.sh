@@ -15,6 +15,7 @@
 # =============================================================
 # Set default variables
 # =============================================================
+SCRIPT_VERSION="0.1.0"
 PATH=$PATH:~/bin:/usr/local/bin:/usr/bin:/bin:/opt/share/bin
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SITES="$HOME/.config/haptiq-backups"
@@ -184,7 +185,7 @@ run_backup() {
 	fi
 
 	# Run the backup (this will backup both the site files & exported database)
-	if restic backup "$SITE_PATH" "/tmp/$SITE_DOMAIN.sql" --repo="$RESTIC_REPOSITORY_REMOTE"; then
+	if restic backup "$SITE_PATH" "/tmp/$SITE_DOMAIN.sql" --repo="$RESTIC_REPOSITORY_REMOTE" --tag "v=$SCRIPT_VERSION"; then
 		echo "Backup for $SITE_DOMAIN completed successfully"
 	else
 		echo "Error: Backup failed for $SITE_DOMAIN"
