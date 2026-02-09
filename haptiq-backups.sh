@@ -397,15 +397,19 @@ should_run_backup() {
 		last_backup=$(cat "$last_backup_file")
 	else
 		# Get last backup time from restic, if no lockfile was found
-		local restic_time=$(restic snapshots --repo="$RESTIC_REPOSITORY_REMOTE" --latest 1 --json | jq -r '.[0].time // empty')
-
-		# Parse ISO format: 2025-09-17T11:17:56.828927+02:00
-		if [[ -n "$restic_time" && "$restic_time" != "null" ]]; then
+		local restic_output=$(restic snapshots --repo="$RESTIC_REPOSITORY_REMOTE" --latest 1)
+		local restic_time=""
+		
+		# Extract datetime from restic output (format: YYYY-MM-DD HH:MM:SS)
+		if [[ "$restic_output" =~ [0-9]{4}-[0-9]{2}-[0-9]{2}\ [0-9]{2}:[0-9]{2}:[0-9]{2} ]]; then
+			restic_time="${BASH_REMATCH[0]}"
+			
+			# Convert to timestamp
 			if $IS_GNU_DATE; then
 				last_backup=$(date -d "$restic_time" +%s 2>/dev/null)
 			else
-				# BSD date - handle ISO format with timezone
-				last_backup=$(date -j -f "%Y-%m-%dT%H:%M:%S" "${restic_time%.*}" +%s 2>/dev/null)
+				# BSD date
+				last_backup=$(date -j -f "%Y-%m-%d %H:%M:%S" "$restic_time" +%s 2>/dev/null)
 			fi
 		fi
 
