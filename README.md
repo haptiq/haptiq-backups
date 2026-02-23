@@ -23,10 +23,10 @@ A bash script for creating encrypted WordPress backups using restic and storing 
    cd haptiq-backups
    ```
 
-3. Make the script executable:
-   ```bash
-   chmod +x haptiq-backups.sh
-   ```
+The script should be executable after cloning the repository. If that's not the case, make the script executable:
+```bash
+chmod +x haptiq-backups.sh
+```
 
 ## Configuration
 
