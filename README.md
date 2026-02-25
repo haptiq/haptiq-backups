@@ -34,10 +34,10 @@ Environments may vary, a lot. Ideally you have SSH access to the system where th
    cd haptiq-backups
    ```
 
-3. Make the script executable:
-   ```bash
-   chmod +x haptiq-backups.sh
-   ```
+The script should be executable after cloning the repository. If that's not the case, make the script executable:
+```bash
+chmod +x haptiq-backups.sh
+```
 
 ## Configuration
 
