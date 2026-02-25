@@ -49,7 +49,7 @@ The script compares the last backup time with the scheduled time from each site'
 
 ## License
 
-GNU General Public License v3 (https://www.gnu.org/licenses/gpl-3.0.html)
+Licensed under the GNU General Public License v3 (GPLv3). See [LICENSE](LICENSE) file.
 
 ## Get In Touch
 
