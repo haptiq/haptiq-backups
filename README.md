@@ -13,6 +13,17 @@ A bash script for creating encrypted WordPress backups using restic and storing 
 
 ## Installation
 
+### Requirements
+
+Environments may vary, a lot. Ideally you have SSH access to the system where the backup script should be periodically executed and the ability to install tools.
+
+- SSH access
+- Ability to install `restic` and `wp-cli`
+- Ability to execute commands/scripts
+- Ability to create cronjobs to automate backups
+
+### Step by step
+
 1. Install dependencies:
    - [restic](https://restic.net/)
    - [WP-CLI](https://wp-cli.org/)
