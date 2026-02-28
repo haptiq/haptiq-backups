@@ -64,4 +64,4 @@ Licensed under the GNU General Public License v3 (GPLv3). See [LICENSE](LICENSE)
 
 ## Get In Touch
 
-[![Haptiq Studio – Get In Touch](http://media.haptiq.studio/haptiq-github-banner.jpg)](https://haptiq.studio/)
+[![Haptiq Studio – Get In Touch](https://media.haptiq.studio/haptiq-github-banner.jpg)](https://haptiq.studio/)
