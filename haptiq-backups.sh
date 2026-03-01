@@ -449,8 +449,15 @@ should_run_backup() {
 		# Check restic lockfile to avoid multiple backups running at once
 		local LOCKS=$(restic list locks --repo="$RESTIC_REPOSITORY_REMOTE" --quiet)
 		if [ -n "$LOCKS" ]; then
-			echo "A backup for $SITE_DOMAIN is already running. Skipping."
-			exit 1
+			echo "Lock detected for $SITE_DOMAIN. Checking if stale..."
+			
+			# Try to unlock stale locks (restic unlock only removes locks older than 30min by default)
+			if restic unlock --repo="$RESTIC_REPOSITORY_REMOTE" 2>&1 | grep -q "removed"; then
+				echo "Removed stale lock. Proceeding with backup..."
+			else
+				echo "Active backup running for $SITE_DOMAIN. Skipping."
+				return 1
+			fi
 		fi
 
 		return 0
