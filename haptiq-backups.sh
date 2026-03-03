@@ -34,6 +34,18 @@ SCRIPT_VERSION="0.1.0"
 PATH=$PATH:~/bin:/usr/local/bin:/usr/bin:/bin:/opt/share/bin
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SITES="$HOME/.config/haptiq-backups"
+LOG_FILE="${LOG_FILE:-$HOME/logs/haptiq-backup.log}"
+
+# Create log directory if it doesn't exist
+mkdir -p "$(dirname "$LOG_FILE")"
+
+
+# =============================================================
+# Logging function with timestamps
+# =============================================================
+log() {
+	echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE"
+}
 
 
 # =============================================================
@@ -141,28 +153,28 @@ date_compat() {
 # storage server, and if not, initializes a new one.
 # =============================================================
 setup_restic_repository() {
-	echo "Checking restic repository setup for $SITE_DOMAIN..."
+	log "Checking restic repository setup for $SITE_DOMAIN..."
 	
 	# Check if repository exists and is accessible
-	echo "Checking restic repository at $RESTIC_REPOSITORY_REMOTE"
+	log "Checking restic repository at $RESTIC_REPOSITORY_REMOTE"
 	if restic cat config --repo="$RESTIC_REPOSITORY_REMOTE" &>/dev/null; then
-		echo "Restic repository exists and is accessible"
+		log "Restic repository exists and is accessible"
 		return 0
 	else
 		# More specific error handling (optional)
-		echo "Repository check failed - could be:"
-		echo "  - Repository doesn't exist"
-		echo "  - Wrong password (RESTIC_PASSWORD)"
-		echo "  - Connection issues"
-		echo "Attempting to initialize..."
+		log "Repository check failed - could be:"
+		log "  - Repository doesn't exist"
+		log "  - Wrong password (RESTIC_PASSWORD)"
+		log "  - Connection issues"
+		log "Attempting to initialize..."
 	fi
 
 	# Repository doesn't exist - initialize it
 	if restic init --repo="$RESTIC_REPOSITORY_REMOTE"; then
-		echo "Backup Repository initialized for $SITE_DOMAIN"
+		log "Backup Repository initialized for $SITE_DOMAIN"
 		return 0
 	else
-		echo "Error: Failed to initialize restic repository for $SITE_DOMAIN"
+		log "Error: Failed to initialize restic repository for $SITE_DOMAIN"
 		return 1
 	fi
 }
@@ -172,7 +184,7 @@ setup_restic_repository() {
 # Export the database using WP-CLI
 # =============================================================
 export_db() {
-	echo "Exporting database"
+	log "Exporting database"
 	wp db export "/tmp/$SITE_DOMAIN.sql" --path="$SITE_PATH" --add-drop-table --single-transaction
 }
 
@@ -181,41 +193,41 @@ export_db() {
 # Run backup
 # =============================================================
 run_backup() {
-	echo "Processing $SITE_DOMAIN backup"
+	log "Processing $SITE_DOMAIN backup"
 	
 	if ! setup_restic_repository; then
-		echo "Error: Could not set up restic repository for $SITE_DOMAIN"
-		echo "Skipping backup for this site"
-		echo "------"
+		log "Error: Could not set up restic repository for $SITE_DOMAIN"
+		log "Skipping backup for this site"
+		log "------"
 		return 1
 	fi
 
 	# Create database export
-	echo "Exporting database for $SITE_DOMAIN"
+	log "Exporting database for $SITE_DOMAIN"
 	if ! export_db; then
-		echo "Error: Database export failed for $SITE_DOMAIN"
-		echo "Skipping backup for this site"
-		echo "------"
+		log "Error: Database export failed for $SITE_DOMAIN"
+		log "Skipping backup for this site"
+		log "------"
 		return 1
 	fi
 
 	# Run the backup (this will backup both the site files & exported database)
 	if restic backup "$SITE_PATH" "/tmp/$SITE_DOMAIN.sql" --repo="$RESTIC_REPOSITORY_REMOTE" --tag "v=$SCRIPT_VERSION"; then
-		echo "Backup for $SITE_DOMAIN completed successfully"
+		log "Backup for $SITE_DOMAIN completed successfully"
 	else
-		echo "Error: Backup failed for $SITE_DOMAIN"
+		log "Error: Backup failed for $SITE_DOMAIN"
 		return 1
 	fi
 
 	# Remove the exported database file
 	if rm "/tmp/$SITE_DOMAIN.sql"; then
-		echo "Temporary database dump file for $SITE_DOMAIN removed"
+		log "Temporary database dump file for $SITE_DOMAIN removed"
 	else
-		echo "Warning: Could not remove temporary database dump file for $SITE_DOMAIN"
+		log "Warning: Could not remove temporary database dump file for $SITE_DOMAIN"
 	fi
 
-	echo "Backup for $SITE_DOMAIN completed."
-	echo "------"
+	log "Backup for $SITE_DOMAIN completed."
+	log "------"
 
 	return 0
 }
@@ -227,7 +239,7 @@ run_backup() {
 # Deletes old backups according to the retention rules
 # =============================================================
 remove_old_backups() {
-	echo "Processing old backups for $SITE_DOMAIN"
+	log "Processing old backups for $SITE_DOMAIN"
 
 	# Use config values if set, otherwise use defaults
 	KEEP_YEARLY="${KEEP_YEARLY:-}"
@@ -248,10 +260,10 @@ remove_old_backups() {
 	
 	restic forget --repo="$RESTIC_REPOSITORY_REMOTE" --prune $KEEP_ARGS
 	
-	echo "Old backups have been removed"
+	log "Old backups have been removed"
 	
 	# Clean up old cache directories
-	echo "Cleaning up old cache directories..."
+	log "Cleaning up old cache directories..."
 	restic cache --cleanup --repo="$RESTIC_REPOSITORY_REMOTE" 2>/dev/null || true
 }
 
@@ -438,18 +450,18 @@ should_run_backup() {
 	
 	# Safety check for empty values
 	if [[ -z "$last_schedule" || -z "$last_backup" ]]; then
-		echo "Error: Empty timestamp values - last_schedule='$last_schedule' last_backup='$last_backup'"
+		log "Error: Empty timestamp values - last_schedule='$last_schedule' last_backup='$last_backup'"
 		return 1
 	fi
 	
 	# Check if the last scheduled time is after the last backup
 	if [ "$last_schedule" -gt "$last_backup" ]; then
-		echo "Backup is overdue! Running now..."
+		log "Backup is overdue! Running now..."
 		
 		# Check restic lockfile to avoid multiple backups running at once
 		local LOCKS=$(restic list locks --repo="$RESTIC_REPOSITORY_REMOTE" --quiet)
 		if [ -n "$LOCKS" ]; then
-			echo "Lock detected for $SITE_DOMAIN. Checking if stale..."
+			log "Lock detected for $SITE_DOMAIN. Checking if stale..."
 			
 			# Try to unlock stale locks (restic unlock only removes locks older than 30min by default)
 			restic unlock --repo="$RESTIC_REPOSITORY_REMOTE" >/dev/null 2>&1
@@ -457,16 +469,16 @@ should_run_backup() {
 			# Check again if locks still exist after unlock attempt
 			local LOCKS_AFTER=$(restic list locks --repo="$RESTIC_REPOSITORY_REMOTE" --quiet)
 			if [ -z "$LOCKS_AFTER" ]; then
-				echo "Removed stale lock. Proceeding with backup..."
+				log "Removed stale lock. Proceeding with backup..."
 			else
-				echo "Active backup running for $SITE_DOMAIN. Skipping."
+				log "Active backup running for $SITE_DOMAIN. Skipping."
 				return 1
 			fi
 		fi
 
 		return 0
 	else
-		echo "Backup is up to date. Skipping."
+		log "Backup is up to date. Skipping."
 		return 1
 	fi
 }
@@ -478,18 +490,18 @@ should_run_backup() {
 # Actually runs the whole script, looping through all site backups
 # ===================================================
 if [[ ! -d "$SITES" ]]; then
-	echo "Error: Sites directory '$SITES' not found"
+	log "Error: Sites directory '$SITES' not found"
 	exit 1
 fi
 
 for SITE in "$SITES"/*.env; do
 
 	if [[ ! -f "$SITE" ]]; then
-		echo "No .env files found in $SITES"
+		log "No .env files found in $SITES"
 		break
 	fi
 	
-	echo "Loading configuration from $(basename "$SITE")..."
+	log "Loading configuration from $(basename "$SITE")..."
 
 	# Source environment file first, so all functions can access variables
 	set -a
@@ -498,8 +510,8 @@ for SITE in "$SITES"/*.env; do
 
 	# Check if required variables are set
 	if [[ -z "$SITE_DOMAIN" || -z "$SITE_PATH" || -z "$RESTIC_REPOSITORY_REMOTE" ]]; then
-		echo "Error: Missing required variables in $(basename "$SITE")"
-		echo "Skipping this site..."
+		log "Error: Missing required variables in $(basename "$SITE")"
+		log "Skipping this site..."
 		continue
 	fi
 
@@ -513,4 +525,4 @@ for SITE in "$SITES"/*.env; do
 	fi
 done
 
-echo "All backups completed!"
+log "All backups completed!"
