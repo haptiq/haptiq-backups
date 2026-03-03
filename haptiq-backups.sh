@@ -452,7 +452,11 @@ should_run_backup() {
 			echo "Lock detected for $SITE_DOMAIN. Checking if stale..."
 			
 			# Try to unlock stale locks (restic unlock only removes locks older than 30min by default)
-			if restic unlock --repo="$RESTIC_REPOSITORY_REMOTE" 2>&1 | grep -q "removed"; then
+			restic unlock --repo="$RESTIC_REPOSITORY_REMOTE" >/dev/null 2>&1
+			
+			# Check again if locks still exist after unlock attempt
+			local LOCKS_AFTER=$(restic list locks --repo="$RESTIC_REPOSITORY_REMOTE" --quiet)
+			if [ -z "$LOCKS_AFTER" ]; then
 				echo "Removed stale lock. Proceeding with backup..."
 			else
 				echo "Active backup running for $SITE_DOMAIN. Skipping."
