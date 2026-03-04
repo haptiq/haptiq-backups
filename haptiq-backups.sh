@@ -7,7 +7,7 @@
 # Creates encrypted WordPress backups using restic and stores
 # them on an external storage server.
 #
-# Version: 0.1.0
+# Version: 0.2.0
 #
 # Copyright (C) 2026 Claudio Rimann / Haptiq GmbH
 #
@@ -30,7 +30,7 @@
 # =============================================================
 # Set default variables
 # =============================================================
-SCRIPT_VERSION="0.1.0"
+SCRIPT_VERSION="0.2.0"
 PATH=$PATH:~/bin:/usr/local/bin:/usr/bin:/bin:/opt/share/bin
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SITES="$HOME/.config/haptiq-backups"
